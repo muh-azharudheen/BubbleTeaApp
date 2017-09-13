@@ -21,9 +21,13 @@
  */
 
 import UIKit
+import CoreData
 
 class ViewController: UIViewController {
 
+  var fetchRequest: NSFetchRequest<Venue>!
+  var venues: [Venue]!
+  
   // MARK: - Properties
   private let filterViewControllerSegueIdentifier = "toFilterViewController"
   fileprivate let venueCellIdentifier = "VenueCell"
@@ -36,13 +40,16 @@ class ViewController: UIViewController {
   // MARK: - View Life Cycle
   override func viewDidLoad() {
     super.viewDidLoad()
+    
+    fetchRequest = Venue.fetchRequest()
+    fetchAndReload()
   }
 
   // MARK: - Navigation
   override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-    if segue.identifier == filterViewControllerSegueIdentifier {
-      
-    }
+    guard segue.identifier == filterViewControllerSegueIdentifier, let nav = segue.destination as? UINavigationController , let vc = nav.topViewController as? FilterViewController else { return }
+      vc.coreDataStack = coreDataStack
+    vc.delegate = self
   }
 }
 
@@ -57,13 +64,39 @@ extension ViewController {
 extension ViewController: UITableViewDataSource {
 
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return 10
+    return venues.count
   }
 
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: venueCellIdentifier, for: indexPath)
-    cell.textLabel?.text = "Bubble Tea Venue"
-    cell.detailTextLabel?.text = "Price Info"
+    let venue = venues[indexPath.row]
+    cell.textLabel?.text = venue.name
+    cell.detailTextLabel?.text = venue.priceInfo?.priceCategory
     return cell
+  }
+}
+
+// MARK: - Helper methods
+extension ViewController {
+  fileprivate func fetchAndReload() {
+    do {
+      venues = try coreDataStack.managedContext.fetch(fetchRequest)
+      tableView.reloadData()
+    } catch let error as NSError {
+      print("Could not fetch \(error), \(error.userInfo)")
+    }
+  } }
+
+
+extension ViewController: FilterViewControllerDelegate{
+  func filterViewController(filter: FilterViewController, didSelectPredicate predicate: NSPredicate?, sortDescriptor: NSSortDescriptor?) {
+    fetchRequest.predicate = nil
+    fetchRequest.sortDescriptors = nil
+    
+    fetchRequest.predicate = predicate
+    if let sr = sortDescriptor{
+      fetchRequest.sortDescriptors = [sr]
+    }
+    fetchAndReload()
   }
 }

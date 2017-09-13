@@ -65,7 +65,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   func importJSONSeedData() {
     let jsonURL = Bundle.main.url(forResource: "seed", withExtension: "json")!
-    let jsonData = NSData(contentsOf: jsonURL) as! Data
+    let jsonData = NSData(contentsOf: jsonURL)! as Data
 
     let venueEntity = NSEntityDescription.entity(forEntityName: "Venue", in: coreDataStack.managedContext)!
     let locationEntity = NSEntityDescription.entity(forEntityName: "Location", in: coreDataStack.managedContext)!
