@@ -26,7 +26,8 @@ import CoreData
 class ViewController: UIViewController {
 
   var fetchRequest: NSFetchRequest<Venue>!
-  var venues: [Venue]!
+  var asyncFetchRequest: NSAsynchronousFetchRequest<Venue>!
+  var venues: [Venue] = []
   
   // MARK: - Properties
   private let filterViewControllerSegueIdentifier = "toFilterViewController"
@@ -42,7 +43,36 @@ class ViewController: UIViewController {
     super.viewDidLoad()
     
     fetchRequest = Venue.fetchRequest()
-    fetchAndReload()
+    
+    asyncFetchRequest = NSAsynchronousFetchRequest<Venue>(fetchRequest: fetchRequest, completionBlock: { [unowned self](result) in
+      guard let venues = result.finalResult else {return}
+      self.venues = venues
+      self.tableView.reloadData()
+    })
+    // 3
+    do {
+      try coreDataStack.managedContext.execute(asyncFetchRequest)
+      // Returns immediately, cancel here if you want
+    } catch let error as NSError {
+      print("Could not fetch \(error), \(error.userInfo)")
+    }
+    
+    
+    let batchUpdate = NSBatchUpdateRequest(entityName: "Venue")
+    batchUpdate.propertiesToUpdate =
+      [#keyPath(Venue.favorite) : true]
+    batchUpdate.affectedStores =
+      coreDataStack.managedContext
+        .persistentStoreCoordinator?.persistentStores
+    batchUpdate.resultType = .updatedObjectsCountResultType
+    do {
+      let batchResult =
+        try coreDataStack.managedContext.execute(batchUpdate)
+          as! NSBatchUpdateResult
+      print("Records updated \(batchResult.result!)")
+    } catch let error as NSError {
+      print("Could not update \(error), \(error.userInfo)")
+    }
   }
 
   // MARK: - Navigation
